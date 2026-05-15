@@ -1,19 +1,15 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>File List</title>
-</head>
-<body>
-  {% for message in get_flashed_messages() %}
-    <p style="color: red;">{{ message }}</p>
-  {% endfor %}
+{% extends "layout.html" %}
 
-  
+{% block content %}
+  <p><a href="{{ url_for('new_file') }}">+ Create new document</a></p>
   <ul>
     {% for file in documents %}
-      <li><a href="{{ url_for('file_content', filename=file) }}">{{ file }}</a></li>
+      <li>
+        <a href="{{ url_for('file_content', filename=file) }}">{{ file }}</a>
+        <a href="{{ url_for('edit_file', filename=file) }}">edit</a>
+        <form action="{{ url_for('delete_file', filename=file) }}" method="post" style="display: inline;">
+          <button type="submit" onclick="return confirm('Are you sure you want to delete {{ file }}?');">delete</button>
+        </form>
     {% endfor %}
   </ul>
-</body>
-</html>
+{% endblock %}

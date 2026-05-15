@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Document</title>
+</head>
+<body>
+    <h1>Create a new document</h1>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul style="color: red;">
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('create_file') }}" method="post">
+        <label for="filename">Filename (e.g., myfile.txt or mypage.md):</label><br>
+        <input type="text" id="filename" name="filename" required><br><br>
+        <button type="submit">Create</button>
+    </form>
+
+    <p><a href="{{ url_for('index') }}">← Back to index</a></p>
+</body>
+</html>

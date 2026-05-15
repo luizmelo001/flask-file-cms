@@ -5,24 +5,34 @@ from flask import (
     send_from_directory,
     flash,
     redirect,
-    url_for
+    url_for,
+    request
 )
 
 from markdown import markdown
 import os
+import warnings
+warnings.filterwarnings("ignore", category=ResourceWarning)
 
 # Create the Flask application
 app = Flask(__name__)
 app.config['DOCUMENTS_FOLDER'] = 'documents'   # set default documents folder, can be overridden in tests
 app.secret_key = 'secret'
 
+def get_data_path():
+    if app.config.get('TESTING'):
+        # When running tests, use a dedicated folder inside tests/
+        return os.path.join(os.path.dirname(__file__), 'tests', 'data')
+    else:
+        # In production, use the default documents folder
+        return app.config['DOCUMENTS_FOLDER']
 
 # Define the route for the homepage
 @app.route("/")
 def index():
     
     # Get the path to the documents folder from the app configuration
-    docs_folder = current_app.config['DOCUMENTS_FOLDER']
+    docs_folder = get_data_path()
     # Get a list of all documents in the folder
     try:
         files= os.listdir(docs_folder)
@@ -31,10 +41,42 @@ def index():
     # Render the homepage template with the list of documents
     return render_template('index.html', documents=files)
 
+# Create a new file
+@app.route("/new")
+def new_file():
+    # Render a form to create a new file
+    return render_template('new.html')
+
+@app.route("/create", methods=['POST'])
+def create_file():
+    # Create a new empty file from the submitted form data
+    filename = request.form.get('filename', '').strip()
+    docs_folder = get_data_path()
+    file_path = os.path.join(docs_folder, filename)
+
+    #Validation
+    if not filename:
+        flash("A name is required.")
+        return render_template('new.html'), 422 # Unprocessable Entity
+    
+    if os.path.exists(file_path):
+        flash(f"File '{filename}' already exists.")
+        return render_template('new.html'), 422
+    
+    #Create the new file
+    with open(file_path, 'w') as f:
+        f.write('') # empty content - user can edit later
+
+    flash(f"File '{filename}' has been created.")
+    return redirect(url_for('index'))
+
+
+
+
 @app.route("/documents/<filename>")
 def file_content(filename):
     # Check if the requested file exists in the documents folder
-    docs_folder = current_app.config['DOCUMENTS_FOLDER']
+    docs_folder = get_data_path()
     file_path = os.path.join(docs_folder, filename)
     
     if os.path.isfile(file_path):
@@ -44,7 +86,7 @@ def file_content(filename):
             with open(file_path, 'r') as f:
                 content = f.read()
                 html_content = markdown(content)
-                return html_content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+                return render_template('markdown.html', content=html_content)
         # For other file types, serve them directly
         return send_from_directory(docs_folder, filename)
     else:
@@ -55,6 +97,45 @@ def file_content(filename):
     # Serve the requested document
     return send_from_directory(docs_folder, filename)
 
+# Edit the file content
+@app.route("/documents/<filename>/edit", methods=['GET', 'POST'])
+def edit_file(filename):
+    # Check if the requested file exists in the documents folder
+    docs_folder = get_data_path()
+    file_path = os.path.join(docs_folder, filename)
+    
+    if os.path.isfile(file_path):
+        if request.method == 'POST':
+            # Save the edited content to the file
+            new_content = request.form['content']
+            with open(file_path, 'w') as f:
+                f.write(new_content)
+            flash(f"File '{filename}' has been updated.")
+            return redirect(url_for('index'))
+        else:
+            # Read the current content of the file and render the edit form
+            with open(file_path, 'r') as f:
+                content = f.read()
+            return render_template('edit.html', filename=filename, content=content)
+    else:
+        # If the file does not exist, flash an error message and redirect to the homepage
+        flash(f"File '{filename}' not found.")
+        return redirect(url_for('index'))
+    
+# Delete a file
+@app.route("/documents/<filename>/delete", methods=['POST'])
+def delete_file(filename):
+    # Check if the requested file exists in the documents folder
+    docs_folder = get_data_path()
+    file_path = os.path.join(docs_folder, filename)
+
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+        flash(f"File '{filename}' has been deleted.")
+        return redirect(url_for('index'))
+    else:
+        flash(f"File '{filename}' not found.")
+    return redirect(url_for('index'))
 
 # Run the app
 if __name__ == "__main__":
