@@ -21,6 +21,16 @@ app = Flask(__name__)
 app.config['DOCUMENTS_FOLDER'] = 'documents'   # set default documents folder, can be overridden in tests
 app.secret_key = 'secret'
 
+# Decorator to require sign in for certain routes
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if 'username' not in session:
+            flash("You must be signed in to access this page.")
+            return redirect(url_for('signin'))
+        return f(*args, **kwargs)
+    return wrapper
+
 def get_data_path():
     if app.config.get('TESTING'):
         # When running tests, use a dedicated folder inside tests/
@@ -45,11 +55,13 @@ def index():
 
 # Create a new file
 @app.route("/new")
+@login_required
 def new_file():
     # Render a form to create a new file
     return render_template('new.html')
 
 @app.route("/create", methods=['POST'])
+@login_required
 def create_file():
     # Create a new empty file from the submitted form data
     filename = request.form.get('filename', '').strip()
@@ -71,8 +83,6 @@ def create_file():
 
     flash(f"File '{filename}' has been created.")
     return redirect(url_for('index'))
-
-
 
 
 @app.route("/documents/<filename>")
@@ -101,6 +111,7 @@ def file_content(filename):
 
 # Edit the file content
 @app.route("/documents/<filename>/edit", methods=['GET', 'POST'])
+@login_required
 def edit_file(filename):
     # Check if the requested file exists in the documents folder
     docs_folder = get_data_path()
@@ -126,6 +137,7 @@ def edit_file(filename):
     
 # Delete a file
 @app.route("/documents/<filename>/delete", methods=['POST'])
+@login_required
 def delete_file(filename):
     # Check if the requested file exists in the documents folder
     docs_folder = get_data_path()

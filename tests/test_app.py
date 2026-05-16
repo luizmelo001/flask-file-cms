@@ -54,6 +54,7 @@ class CMSTest(unittest.TestCase):
         self.assertIn("Python 0.9.0 (initial release) is released.", response.get_data(as_text=True)) # is a in b?
 
     def test_file_content_markdown(self):
+        self.client.post('/signin', data={'username': 'admin', 'password': 'password'})
         # Create a test markdown document
         self.create_document('about.md', "# Python is...")
 
@@ -85,6 +86,7 @@ class CMSTest(unittest.TestCase):
         self.assertNotIn("not found", index_response.get_data(as_text=True))
 
     def test_edit_file(self):
+        self.client.post('/signin', data={'username': 'admin', 'password': 'password'})
         # Create a test document
         self.create_document('history.txt', 'original content')
         # Test the edit file route for an existing file
@@ -107,6 +109,7 @@ class CMSTest(unittest.TestCase):
             self.assertEqual(content, new_content)
 
     def test_new_file_form(self):
+        self.client.post('/signin', data={'username': 'admin', 'password': 'password'})
         # Test the new file form route
         response = self.client.get('/new')
         self.assertEqual(response.status_code, 200)
@@ -114,6 +117,7 @@ class CMSTest(unittest.TestCase):
         self.assertIn('type="submit"', response.get_data(as_text=True))
 
     def test_create_new_file(self):
+        self.client.post('/signin', data={'username': 'admin', 'password': 'password'})
         #Test the new file creation route
         response = self.client.post('/create', data={'filename': 'newfile.txt'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
@@ -129,6 +133,7 @@ class CMSTest(unittest.TestCase):
     def test_delete_file(self):
         #Create a test document
         self.create_document('todelete.txt', 'content to delete')
+        self.client.post('/signin', data={'username': 'admin', 'password': 'password'})
 
         #Test the delete file route
         response = self.client.post('/documents/todelete.txt/delete', follow_redirects=True)
@@ -151,6 +156,19 @@ class CMSTest(unittest.TestCase):
         response = self.client.post('/signout', follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'You have been signed out.', response.data)
+
+    # Test decorator to require sign in
+    def test_login_required_decorator(self):
+        # Test accessing a protected route without signing in
+        response = self.client.get('/new', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'You must be signed in to access this page.', response.data)
+
+        # Sign in and then access the protected route
+        self.client.post('/signin', data={'username': 'admin', 'password': 'password'}, follow_redirects=True)
+        response = self.client.get('/new')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<input", response.get_data(as_text=True))
 
 
 if __name__ == '__main__':
