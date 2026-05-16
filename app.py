@@ -6,10 +6,12 @@ from flask import (
     flash,
     redirect,
     url_for,
-    request
+    request,
+    session
 )
 
 from markdown import markdown
+from functools import wraps
 import os
 import warnings
 warnings.filterwarnings("ignore", category=ResourceWarning)
@@ -135,6 +137,37 @@ def delete_file(filename):
         return redirect(url_for('index'))
     else:
         flash(f"File '{filename}' not found.")
+    return redirect(url_for('index'))
+
+# Sign in route (placeholder, no actual authentication implemented)
+@app.route("/signin", methods=['GET', 'POST'])
+def signin():
+    # If user is already signed in, redirect to the index page
+    if 'username' in session:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        # Hardcoded credentials for demonstration purposes
+        if username == 'admin' and password == 'password':
+            session['username'] = username
+            flash("You have successfully signed in.")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid username or password.")
+            return render_template('signin.html'), 401 # Unauthorized
+        
+    # Get request - render the sign in form
+    return render_template('signin.html')
+
+# Create signout route
+@app.route("/signout", methods=['POST'])
+def signout():
+    # Remove username from session
+    session.pop('username', None)
+    flash("You have been signed out.")
     return redirect(url_for('index'))
 
 # Run the app

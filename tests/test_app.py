@@ -134,7 +134,24 @@ class CMSTest(unittest.TestCase):
         response = self.client.post('/documents/todelete.txt/delete', follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'has been deleted', response.data)
-                    
+
+    #Test sign in route
+    def test_signin(self):
+        response = self.client.post('/signin', data={'username': 'admin', 'password': 'password'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'You have successfully signed in.', response.data)
+
+    def test_signin_invalid(self):
+        response = self.client.post('/signin', data={'username': 'wrong', 'password': 'credentials'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 401)
+        self.assertIn(b'Invalid username or password.', response.data)
+
+    # Test sign out route
+    def test_signout(self):
+        response = self.client.post('/signout', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'You have been signed out.', response.data)
+
 
 if __name__ == '__main__':
     unittest.main()

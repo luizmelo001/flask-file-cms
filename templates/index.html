@@ -12,4 +12,15 @@
         </form>
     {% endfor %}
   </ul>
+  
+  {% if session.username %}
+    <form method="post" action="{{ url_for('signout') }}">
+      <p class="user-status">
+        Signed in as {{ session.username }}.
+        <button type="submit">Sign Out</button>
+      </p>
+    </form>
+  {% else %}
+    <p class="user-status"><a href="{{ url_for('signin') }}">Sign In</a></p>
+  {% endif %}
 {% endblock %}
