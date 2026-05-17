@@ -7,12 +7,14 @@ from flask import (
     redirect,
     url_for,
     request,
-    session
+    session 
 )
 
 from markdown import markdown
 from functools import wraps
 import os
+import yaml
+import bcrypt  
 import warnings
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
@@ -38,6 +40,12 @@ def get_data_path():
     else:
         # In production, use the default documents folder
         return app.config['DOCUMENTS_FOLDER']
+
+def get_users_file_path():
+    if app.config.get('TESTING'):
+        return os.path.join(os.path.dirname(__file__), 'tests', 'users.yml')
+    else:
+        return os.path.join(os.path.dirname(__file__), 'users', 'users.yml')
 
 # Define the route for the homepage
 @app.route("/")
@@ -154,6 +162,10 @@ def delete_file(filename):
 # Sign in route (placeholder, no actual authentication implemented)
 @app.route("/signin", methods=['GET', 'POST'])
 def signin():
+    users = get_users_file_path()
+    with open(users, 'r') as f:
+        user_data = yaml.safe_load(f)
+        
     # If user is already signed in, redirect to the index page
     if 'username' in session:
         return redirect(url_for('index'))
@@ -162,11 +174,13 @@ def signin():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
 
-        # Hardcoded credentials for demonstration purposes
-        if username == 'admin' and password == 'password':
-            session['username'] = username
-            flash("You have successfully signed in.")
-            return redirect(url_for('index'))
+        # Check if the provided credentials match any user in the YAML file
+        if username in user_data:
+            stored_hash = user_data[username].encode('utf-8')
+            if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+                session['username'] = username
+                flash("You have successfully signed in.")
+                return redirect(url_for('index'))
         else:
             flash("Invalid username or password.")
             return render_template('signin.html'), 401 # Unauthorized
